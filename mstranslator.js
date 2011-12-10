@@ -85,12 +85,24 @@ var call_speak = function(path, params, access_token, fn) {
   params = convertArrays(params);
   settings.path= http_root + path + '?' + querystring.stringify(params);
   var req = http.request(settings, function(res) {
-    //res.setEncoding('utf8');
-    var body;
+    
+    var buffers = [];
+
     res.on('data', function (chunk) {
-      body += chunk;
+      if(!Buffer.isBuffer(chunk)){
+        chunk = new Buffer(chunk);
+      }
+      buffers.push(chunk);
     });
     res.on('end', function () {
+      var index = 0;
+      var buffer_length = buffers.reduce(function(sum, e) { return sum += e.length }, 0);
+      var body = new Buffer(buffer_length);
+      buffers.forEach(function (buf, i) {
+        buf.copy(body, index, 0, buf.length);
+        index += buf.length;
+      });
+      delete(buffers);
       fn(null, body);
     });
   });
